@@ -1,5 +1,5 @@
 {
-    "max_speed" : 126,
+    "max_speed" : 226,
     "min_speed" : 1,
     "max_yawrate" : 45.0,
     "max_accel" : 10,

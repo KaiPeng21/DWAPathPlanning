@@ -232,6 +232,8 @@ class DWA:
         #print('df len: ', df.shape[0])
         #print(obstacle_df.shape[0])
         #df['cost_obstacle'] = (obstacle_df['obstacle_dist_square'] <= self.config.robot_radius * 1.5) * float('inf')
+        # # TODO: The obstacles cost logic is not right yet...
+        # # Compute the min distance from traj to obs
         df['cost_obstacle'] = 1
         df.loc[self.is_hit_obstacle(df['predict_x'], df['predict_y']), 'cost_obstacle'] = float('inf')
 
