@@ -1,10 +1,10 @@
 {
-    "max_speed" : 1.26,
-    "min_speed" : 0.01,
+    "max_speed" : 126,
+    "min_speed" : 1,
     "max_yawrate" : 40.0,
-    "max_accel" : 0.1,
+    "max_accel" : 10,
     "max_dyawrate" : 40,
-    "v_reso" : 0.1,
+    "v_reso" : 10,
     "yawrate_reso" : 1,
     "dt" : 0.1,
     "predict_time" : 1.0,
@@ -12,8 +12,8 @@
     "cost_gain_velocity" : 1.0,
     "cost_gain_distance" : 10.0,
     "cost_gain_obstacles" : 20.0,
-    "robot_radius" : 0.25,
-    "grid_reso" : 0.01,
-    "grid_width" : 6.0,
-    "grid_height" : 6.0 
+    "robot_radius" : 25,
+    "grid_reso" : 1,
+    "grid_width" : 600,
+    "grid_height" : 600 
 }

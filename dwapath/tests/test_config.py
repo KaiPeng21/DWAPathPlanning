@@ -1,5 +1,5 @@
 
-from dwapath import DWAConfig, DWA
+from dwapath import DWAConfig
 
 import json
 import os
@@ -17,8 +17,8 @@ def test_config():
         expected['max_yawrate'] *= math.pi / 180.0
         expected['max_dyawrate'] *= math.pi / 180.0
         expected['yawrate_reso'] *= math.pi / 180.0
-        expected['grid_width_len'] = int(expected['grid_width'] // expected['grid_reso'] + 1)
-        expected['grid_height_len'] = int(expected['grid_height'] // expected['grid_reso'] + 1)
+        expected['grid_width_len'] = int(expected['grid_width'] / expected['grid_reso'] + 1)
+        expected['grid_height_len'] = int(expected['grid_height'] / expected['grid_reso'] + 1)
     
     assert expected == config.__dict__
     

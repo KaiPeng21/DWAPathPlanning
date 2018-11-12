@@ -42,11 +42,11 @@ setup(
     description="Open source robotic path planning tool powered by Numpy and Pandas.",
     long_description=DESCRIPTION,
     maintainer="Chia-Hua Peng",
-    maintainer_email="chia-hua.peng@noblis.org",
-    packages=find_packages(),
+    maintainer_email="chia.hp21@gmail.com",
+    packages=find_packages(exclude=("tests",)),
     include_package_data=True,
     zip_safe=False,
-    python_requires=">=3.6.5",
+    python_requires=">=3.5.0",
     install_requires=
     [
         "numpy",

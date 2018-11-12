@@ -21,17 +21,17 @@ class DWAConfig:
             self.max_yawrate *= math.pi / 180.0
             self.max_dyawrate *= math.pi / 180.0
             self.yawrate_reso *= math.pi / 180.0
-            self.grid_width_len = int(self.grid_width // self.grid_reso + 1)
-            self.grid_height_len = int(self.grid_height // self.grid_reso + 1)
+            self.grid_width_len = int(self.grid_width / self.grid_reso + 1)
+            self.grid_height_len = int(self.grid_height / self.grid_reso + 1)
 
 class Rover:
 
     def __init__(self, x, y, yaw, v=0.0, omega=0.0):
         """
-        :param x: the initial x coordinate of the rover (m)
-        :param y: the initial y coordinate of the rover (m)
+        :param x: the initial x coordinate of the rover (cm)
+        :param y: the initial y coordinate of the rover (cm)
         :param yaw: the initial heading of the rover (rad)
-        :param v: the initial velocity of the rover (m/s)
+        :param v: the initial velocity of the rover (cm/s)
         :param omega: the initial yawrate of the rover (rad/s)
         :rtype: A :class:`Rover <Rover>`
         """
@@ -42,11 +42,11 @@ class Rover:
         self.omega = omega * math.pi / 180
     
     def __repr__(self):
-        return '<Rover x: %8.4f , y: %8.4f, yaw: %6.3f, v: %6.3f, w: %6.3f>' % (self.x, self.y, self.yaw * 180 / math.pi, self.v, self.omega * 180 / math.pi)
+        return '<Rover x: %8.2f , y: %8.2f, yaw: %6.3f, v: %6.2f, w: %6.3f>' % (self.x, self.y, self.yaw * 180 / math.pi, self.v, self.omega * 180 / math.pi)
 
     def motion(self, u_velocity, u_yawrate, delta_time):
         """ Move the rover by setting the target velocity and target yawrate
-        :param u_velocity: target velocity (m/s)
+        :param u_velocity: target velocity (cm/s)
         :param u_yawrate: target u_yawrate (rad/s)
         :param delta_time: time difference (s)
         :rtype: None
@@ -56,8 +56,6 @@ class Rover:
         self.yaw += u_yawrate * delta_time
         self.v = u_velocity
         self.omega = u_yawrate
-        
-        
 
 class DWA:
 
@@ -77,24 +75,24 @@ class DWA:
 
     def get_obstacles(self):
         """ Get a 2d numpy array of obstacles in the form [[x, y], [x, y], ...]
-        :rtype: A numpy array of obstacles (unit in meters)
+        :rtype: A numpy array of obstacle indices
         """
         return np.argwhere(self.obstacles == True) * self.config.grid_reso
 
     def set_obstacles(self, x, y):
         """ Set obstacle at specific indecis
-        :param x: obstacle x position in meters
-        :param y: obstacle y position in meters
+        :param x: obstacle x position (cm)
+        :param y: obstacle y position (cm)
         :rtype: None
         """
         try:
-            self.obstacles[(x / self.config.grid_reso).astype(int), (x / self.config.grid_reso).astype(int)] = True
+            self.obstacles[(x / self.config.grid_reso).astype(int), (y / self.config.grid_reso).astype(int)] = True
         except:
-            self.obstacles[int(x / self.config.grid_reso), int(x / self.config.grid_reso)] = True
+            self.obstacles[int(x / self.config.grid_reso), int(y / self.config.grid_reso)] = True
 
 
     def is_out_of_boundary(self, x, y):
-        """ Check if the given x, y (in meters) is out of bound
+        """ Check if the given x, y (in cm) is out of bound
         :param x: numpy array or dataframe series of x coordinates
         :param y: numpy array or dataframe series of y coordinates
         :rtype: numpy array or dataframe series of booleans
@@ -102,16 +100,15 @@ class DWA:
         return (x <= 0) | (x >= self.config.grid_width) | (y <= 0) | (y >= self.config.grid_height)        
 
     def is_hit_obstacle(self, x, y):
-        """ Check if the given x, y (in meters) hit a obstacle
+        """ Check if the given x, y (in cm) hit a obstacle
         :param x: numpy array or dataframe series of x coordinates
         :param y: numpy array or dataframe series of y coordinates
         :rtype: numpy array or dataframe series of booleans
         """
-        given = (np.rot90(np.array([x, y])) / self.config.grid_reso).astype(int)
-        obs = np.argwhere(self.obstacles == True)
-        return self.is_out_of_boundary(x, y) | (np.isin(given, obs)[:, 0] & np.isin(given, obs)[:, 1])
-        #return self.is_out_of_boundary(x, y) | self.obstacles[(x / self.config.grid_reso).astype(int), (y / self.config.grid_reso).astype(int)]
-        
+        x = (x / self.config.grid_reso).astype(int)
+        y = (y / self.config.grid_reso).astype(int)
+        # assuming [0, 0] is always an obstacle because of the boundary
+        return self.obstacles[x * ~self.is_out_of_boundary(x, y), y * ~self.is_out_of_boundary(x, y)]
 
     def _calc_dynamic_window(self, rover):
         """ Compute the dynamic window, or the velocity and yawrate ranges in the next iteration
@@ -194,28 +191,33 @@ class DWA:
 
         gx, gy = goal
 
-        # # Compute heading cost
-        # # - compute the error angle from 
-        # # - angle = acos((RT * RG) / (|RT| * |RG|)) given R: Rover Position, T: Predict Trajectory, G: Goal
-        # # - the smaller the angle -> the smaller the cost
+        # Compute heading cost
+        # - compute the error angle from 
+        # - angle = acos((RT * RG) / (|RT| * |RG|)) given R: Rover Position, T: Predict Trajectory, G: Goal
+        # - the smaller the angle -> the smaller the cost
         # magnitude_goal = ((gx - rover.x)**2 + (gy - rover.y)**2)**0.5
         # print('magnitude_goal: ', magnitude_goal)
         # df['magnitude_traj'] = ((df['predict_x'] - rover.x)**2 + (df['predict_y'] - rover.y)**2)**0.5
-        # df['dot_product'] = gx*(df['predict_x'] - rover.x) + gy*(df['predict_y'] - rover.y)
+        # df['dot_product'] = (gx - rover.x)*(df['predict_x'] - rover.x) + (gy - rover.y)*(df['predict_y'] - rover.y)
         # df['error'] = df['dot_product'] / (magnitude_goal * df['magnitude_traj'])
         # df['error_angle'] = np.arccos((df['error'] > 1) + (df['error'] <= 1)*df['error'])
         # df['cost_heading'] = self.config.cost_gain_heading * df['error_angle'] / math.pi
         # df.drop(['magnitude_traj', 'dot_product', 'error', 'error_angle'], axis=1, inplace=True)
+        
+        # magnitude_goal = (gx**2 + gy**2)**0.5
+        # df['magnitude_traj'] = (df['predict_x']**2 + df['predict_y']**2)**0.5
+        # df['dot_product'] = gx*
+
  
         # Compute velocity cost
         # - compute how fast the rover is moving
         # - the faster the velocity -> the smaller the cost
-        df['cost_velocity'] = self.config.cost_gain_velocity * (self.config.max_speed - df['u_velocity']) / (self.config.max_speed - df['u_velocity'].mean())
+        df['cost_velocity'] = (self.config.max_speed - df['u_velocity']) / (self.config.max_speed - df['u_velocity'].mean() + 1) * self.config.cost_gain_velocity
 
         # Compute distance cost
         dx_mean = df['predict_x'].mean()
         dy_mean = df['predict_y'].mean()
-        df['cost_distance'] = ((gx - df['predict_x'])**2 + (gy - df['predict_y'])**2) / ((gx - dx_mean)**2 + (gy - dy_mean)**2) * self.config.cost_gain_distance
+        df['cost_distance'] = ((gx - df['predict_x'])**2 + (gy - df['predict_y'])**2) / ((gx - dx_mean)**2 + (gy - dy_mean)**2 + 1) * self.config.cost_gain_distance
         
         # Compute obstacle cost
         #obstacle_list = np.rot90(self.get_obstacles())
@@ -230,12 +232,15 @@ class DWA:
         #print('df len: ', df.shape[0])
         #print(obstacle_df.shape[0])
         #df['cost_obstacle'] = (obstacle_df['obstacle_dist_square'] <= self.config.robot_radius * 1.5) * float('inf')
+        df['cost_obstacle'] = 1
         df.loc[self.is_hit_obstacle(df['predict_x'], df['predict_y']), 'cost_obstacle'] = float('inf')
 
         #df.drop(['tmp'], axis=1, inplace=True)
 
         # compute total cost
-        df['cost'] = df['cost_distance'] + df['cost_velocity'] + df['cost_obstacle'] # + df['cost_heading']
+        #df['cost'] = df['cost_velocity'] + df['cost_obstacle'] + df['cost_heading']
+        df['cost'] = df['cost_distance'] + df['cost_velocity'] + df['cost_obstacle'] #+ df['cost_heading']
+
 
         return df
 
@@ -281,7 +286,7 @@ class DWA:
         df.to_csv('test.csv', index=False)
 
 
-def plot_arrow(x, y, yaw, length=0.5, width=0.1):
+def plot_arrow(x, y, yaw, length=250, width=10):
     plt.arrow(x, y, length * math.cos(yaw), length * math.sin(yaw),
               head_length=width, head_width=width)
     plt.plot(x, y)
@@ -289,14 +294,15 @@ def plot_arrow(x, y, yaw, length=0.5, width=0.1):
 def main():
 
     config = DWAConfig(control_file='config.json')
-    rover = Rover(x=1.0, y=1.0, yaw=45.0, v=0, omega=0)
+    rover = Rover(x=500, y=100, yaw=270.0, v=0, omega=0)
     dwa = DWA(config=config)
     
-    gx = 4.5
-    gy = 4.5
+    gx = 500
+    gy = 500
     goal = (gx, gy)
 
-    dwa.set_obstacles(np.array([2, 2]), np.array([4, 3]))
+    #dwa.set_obstacles(np.zeros(100) + 300, np.arange(200, 300))
+
 
     # dynamic_window = dwa._calc_dynamic_window(rover)
     # print('-- min max velocity')
@@ -329,9 +335,6 @@ def main():
         # rover.omega = traj_df['u_yawrate'][0]
         # rover.yaw = traj_df['predict_yaw'][0]
 
-        print(np.rot90(dwa.get_obstacles())[0])
-        print(np.rot90(dwa.get_obstacles())[1])
-
         if True:
             plt.cla()
             plt.plot(np.rot90(dwa.get_obstacles())[1], np.rot90(dwa.get_obstacles())[0], 'o', color='black')
@@ -351,44 +354,8 @@ def main():
             print("GOAL!")
             input("Press Enter to Exit")
             break
-
-    # config = DWAConfig(control_file='config.json')
-    # rover = Rover(x=1.0, y=1.0, yaw=90, v=0, omega=0)
-    # dwa = DWA(config=config)
-
-    # goal = [10.0, 10.0]
-
-    # overallDF = pd.DataFrame()
-
-    # for i in range(100):
-    #     with TaskTimer("DWA Control"):
-    #         u_velocity, u_yawrate, traj_df = dwa.get_dwa_path(rover, goal)
-
-    #     rover.motion(u_velocity, u_yawrate, config.dt)
-
-    #     overallDF = overallDF.append(traj_df)
-
-    #     print(rover)
-    #     if pause_per_iteration:
-    #         input()
-
-    #     if show_animation:
-    #          plt.cla()
-    #          plt.plot(traj_df['predict_x'], traj_df['predict_y'], '-g')
-    #          plt.plot(rover.x, rover.y, 'xr')
-    #          plt.plot(goal[0], goal[1], 'xb')
-    #          plot_arrow(rover.x, rover.y, rover.yaw)
-    #          plt.axis("equal")
-    #          plt.grid(True)
-    #          plt.pause(0.0001)
-
-    #     # check goal
-    #     if (rover.x - goal[0])**2 + (rover.y - goal[1]) <= config.robot_radius**2:
-    #         print("GOAL!")
-    #         break
-
-    # dwa.output_df(overallDF)
-
+    else:
+        print("Failed getting to the goal within the given")
 
 if __name__=="__main__":
     main()
