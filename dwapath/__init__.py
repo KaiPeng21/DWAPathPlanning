@@ -262,7 +262,7 @@ class DWA:
         self.output_df(df)
         print('printed')
 
-        cost_df = df.groupby(['u_velocity', 'u_yawrate']).mean().reset_index()
+        cost_df = df.groupby(['u_velocity', 'u_yawrate']).min().reset_index()
         u_velocity = cost_df.loc[cost_df['cost'].idxmin()]['u_velocity']
         u_yawrate = cost_df.loc[cost_df['cost'].idxmin()]['u_yawrate']
         best_trajectory_df = df.loc[(df['u_velocity'] == u_velocity) & (df['u_yawrate'] == u_yawrate)].reset_index()
@@ -294,15 +294,14 @@ def plot_arrow(x, y, yaw, length=250, width=10):
 def main():
 
     config = DWAConfig(control_file='config.json')
-    rover = Rover(x=500, y=100, yaw=270.0, v=0, omega=0)
+    rover = Rover(x=100, y=100, yaw=225.0, v=0, omega=0)
     dwa = DWA(config=config)
     
     gx = 500
     gy = 500
     goal = (gx, gy)
 
-    #dwa.set_obstacles(np.zeros(100) + 300, np.arange(200, 300))
-
+    dwa.set_obstacles(np.zeros(100) + 300, np.arange(200, 300))
 
     # dynamic_window = dwa._calc_dynamic_window(rover)
     # print('-- min max velocity')

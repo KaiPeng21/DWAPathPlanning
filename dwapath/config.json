@@ -1,7 +1,7 @@
 {
     "max_speed" : 126,
     "min_speed" : 1,
-    "max_yawrate" : 55.0,
+    "max_yawrate" : 45.0,
     "max_accel" : 10,
     "max_dyawrate" : 45.0,
     "v_reso" : 3,
